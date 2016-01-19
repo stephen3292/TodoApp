@@ -8,7 +8,7 @@ var _todos = [],
       }
         return -1;
     };
-
+var StepStore = require('./step_store');
 
 var TodoStore = {
 
@@ -19,7 +19,7 @@ var TodoStore = {
   fetch: function () {
     $.ajax({
       type: "GET",
-      url: "./api/todos",
+      url: "/api/todos",
       dataType: "JSON",
       success: function(data) {
         _todos = data;
@@ -48,7 +48,7 @@ var TodoStore = {
   create: function(todo) {
     $.ajax({
       type: "POST",
-      url: "./api/todos",
+      url: "/api/todos",
       dataType: "JSON",
       data: {todo: todo},
       success: function(data) {
@@ -64,7 +64,7 @@ var TodoStore = {
     if (idx !== -1) {
       $.ajax({
         type: "DELETE",
-        url: "./api/todos/" + id,
+        url: "/api/todos/" + id,
         success: function(data) {
           _todos.splice(idx, 1);
           TodoStore.changed();
@@ -81,7 +81,7 @@ var TodoStore = {
     if (idx !== -1) {
       $.ajax({
         type: "PATCH",
-        url: "./api/todos/" + id,
+        url: "/api/todos/" + id,
         dataType: "json",
         data: {todo: todo},
         success: function(data) {

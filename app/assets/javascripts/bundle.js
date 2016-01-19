@@ -45,6 +45,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var TodoStore = __webpack_require__(1),
+	    StepStore = __webpack_require__(165),
 	    TodoList = __webpack_require__(2),
 	    React = __webpack_require__(3),
 	    ReactDOM = __webpack_require__(160);
@@ -55,7 +56,7 @@
 
 /***/ },
 /* 1 */
-/***/ function(module, exports) {
+/***/ function(module, exports, __webpack_require__) {
 
 	var _todos = [],
 	    _callbacks = [],
@@ -67,6 +68,7 @@
 	  }
 	  return -1;
 	};
+	var StepStore = __webpack_require__(165);
 	
 	var TodoStore = {
 	
@@ -77,7 +79,7 @@
 	  fetch: function () {
 	    $.ajax({
 	      type: "GET",
-	      url: "./api/todos",
+	      url: "/api/todos",
 	      dataType: "JSON",
 	      success: function (data) {
 	        _todos = data;
@@ -106,7 +108,7 @@
 	  create: function (todo) {
 	    $.ajax({
 	      type: "POST",
-	      url: "./api/todos",
+	      url: "/api/todos",
 	      dataType: "JSON",
 	      data: { todo: todo },
 	      success: function (data) {
@@ -121,7 +123,7 @@
 	    if (idx !== -1) {
 	      $.ajax({
 	        type: "DELETE",
-	        url: "./api/todos/" + id,
+	        url: "/api/todos/" + id,
 	        success: function (data) {
 	          _todos.splice(idx, 1);
 	          TodoStore.changed();
@@ -138,7 +140,7 @@
 	    if (idx !== -1) {
 	      $.ajax({
 	        type: "PATCH",
-	        url: "./api/todos/" + id,
+	        url: "/api/todos/" + id,
 	        dataType: "json",
 	        data: { todo: todo },
 	        success: function (data) {
@@ -19802,35 +19804,44 @@
 
 	var React = __webpack_require__(3),
 	    TodoStore = __webpack_require__(1),
-	    DoneButton = __webpack_require__(163);
+	    DoneButton = __webpack_require__(163),
+	    TodoDetailView = __webpack_require__(164);
 	
 	var TodoListItem = React.createClass({
 	  displayName: 'TodoListItem',
 	
+	  getInitialState: function () {
+	    return { detail: false };
+	  },
+	  handleDelete: function () {
+	    TodoStore.destroy(this.props.id);
+	  },
+	
+	  handleDone: function (e) {
+	    e.stopPropagation();
+	    TodoStore.toggleDone(this.props.id);
+	  },
+	
+	  toggleState: function () {
+	    var newDetail = this.state.detail ? false : true;
+	    this.setState({ detail: newDetail });
+	  },
 	  render: function () {
 	    return React.createElement(
 	      'div',
-	      null,
+	      { className: 'list-item', onClick: this.toggleState },
 	      React.createElement(
 	        'div',
 	        { className: 'title' },
 	        this.props.title
 	      ),
-	      React.createElement(
-	        'div',
-	        { className: 'body' },
-	        this.props.body
-	      ),
-	      React.createElement(
-	        'button',
-	        { className: 'item-delete', onClick: this.handleDelete },
-	        'Delete'
-	      ),
-	      React.createElement(DoneButton, { done: this.props.done, id: this.props.id })
+	      React.createElement(DoneButton, { handleDone: this.handleDone, done: this.props.done, id: this.props.id }),
+	      React.createElement(TodoDetailView, {
+	        id: this.props.id,
+	        display: this.state.detail,
+	        body: this.props.body,
+	        'delete': this.handleDelete })
 	    );
-	  },
-	  handleDelete: function () {
-	    TodoStore.destroy(this.props.id);
 	  }
 	});
 	
@@ -19899,21 +19910,221 @@
 	var DoneButton = React.createClass({
 	  displayName: 'DoneButton',
 	
-	  handleDone: function () {
-	    TodoStore.toggleDone(this.props.id);
-	  },
-	
 	  render: function () {
 	    var text = this.props.done ? "Undo" : "Done";
 	    return React.createElement(
 	      'button',
-	      { className: 'done-undo-button', onClick: this.handleDone },
+	      { className: 'done-undo-button', onClick: this.props.handleDone },
 	      text
 	    );
 	  }
 	});
 	
 	module.exports = DoneButton;
+
+/***/ },
+/* 164 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var React = __webpack_require__(3);
+	var TodoStore = __webpack_require__(1);
+	var Step = __webpack_require__(166);
+	var StepStore = __webpack_require__(165);
+	
+	var TodoDetailView = React.createClass({
+	  displayName: 'TodoDetailView',
+	
+	  getInitialState: function () {
+	    return { steps: StepStore.all(this.props.id) };
+	  },
+	  componentDidMount: function () {
+	    StepStore.addChangeHandler(this.stepsChange);
+	    StepStore.fetch(this.props.id);
+	  },
+	  stepsChange: function () {
+	    this.setState({ steps: StepStore.all(this.props.id) });
+	  },
+	
+	  render: function () {
+	    if (this.props.display) {
+	      var stepMapper = this.state.steps.map(function (step) {
+	        return React.createElement(
+	          'li',
+	          null,
+	          React.createElement(Step, { key: step.id, id: step.id, done: step.done, ord: step.ord, step: step.step })
+	        );
+	      });
+	
+	      return React.createElement(
+	        'div',
+	        null,
+	        React.createElement(
+	          'div',
+	          { className: 'body' },
+	          this.props.body
+	        ),
+	        React.createElement(
+	          'ol',
+	          null,
+	          stepMapper
+	        ),
+	        React.createElement(
+	          'button',
+	          { className: 'item-delete', onClick: this.props.delete },
+	          'Delete'
+	        )
+	      );
+	    } else {
+	      return React.createElement('div', null);
+	    }
+	  }
+	});
+	
+	module.exports = TodoDetailView;
+
+/***/ },
+/* 165 */
+/***/ function(module, exports) {
+
+	var steps = {},
+	    _callbacks = [],
+	    remove = function (id) {
+	  for (var todoId in steps) {
+	    if (steps.hasOwnProperty(todoId)) {
+	      for (var j = 0; j < steps[todoId].length; j++) {
+	        if (steps[todoId][j].id === id) {
+	          steps[todoId].splice(j, 1);
+	        }
+	      }
+	    }
+	  }
+	},
+	    lookup = function (id) {
+	  for (var todoId in steps) {
+	    if (steps.hasOwnProperty(todoId)) {
+	      for (var j = 0; j < steps[todoId].length; j++) {
+	        if (steps[todoId][j].id === id) {
+	          return [todoId, j];
+	        }
+	      }
+	    }
+	  }
+	  return -1;
+	};
+	
+	StepStore = {
+	  all: function (todoId) {
+	    return steps[todoId];
+	  },
+	
+	  addChangeHandler: function (handler) {
+	    _callbacks.push(handler);
+	  },
+	
+	  removeChangeHandler: function (handler) {
+	    var idx = _callbacks.indexOf(handler);
+	    if (idx !== -1) {
+	      _callbacks.splice(idx, 1);
+	    }
+	  },
+	
+	  fetch: function (todoId) {
+	    $.ajax({
+	      type: "GET",
+	      url: "/api/todos/" + todoId + "/steps",
+	      dataType: "JSON",
+	      success: function (data) {
+	        steps[todoId] = data;
+	        StepStore.changed();
+	      }
+	    });
+	  },
+	
+	  create: function (step, todoId) {
+	    $.ajax({
+	      type: "POST",
+	      url: "/api/todos/" + todoId + "/steps",
+	      dataType: "JSON",
+	      data: { step: step },
+	      success: function (data) {
+	        steps[todoId].push(data);
+	        StepStore.changed();
+	      }
+	    });
+	  },
+	
+	  destroy: function (id) {
+	    $.ajax({
+	      type: "DELETE",
+	      url: "/api/steps/" + id,
+	      success: function (data) {
+	        remove(id);
+	        StepStore.changed();
+	      }
+	    });
+	  },
+	
+	  toggleDone: function (id) {
+	    var idx = lookup(id)[1];
+	    var todoId = lookup(id)[0];
+	    var step = steps[todoId][idx];
+	    var newBoolean = step.done ? false : true;
+	    step.done = newBoolean;
+	    if (idx !== -1) {
+	      $.ajax({
+	        type: "PATCH",
+	        url: "/api/steps/" + id,
+	        dataType: "json",
+	        data: { step: step },
+	        success: function (data) {
+	          StepStore.changed();
+	        }
+	      });
+	    }
+	  },
+	
+	  changed: function () {
+	    _callbacks.forEach(function (callback) {
+	      callback();
+	    });
+	  }
+	
+	};
+	
+	module.exports = StepStore;
+
+/***/ },
+/* 166 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var React = __webpack_require__(3),
+	    StepStore = __webpack_require__(165),
+	    DoneButton = __webpack_require__(163);
+	
+	var Step = React.createClass({
+	  displayName: 'Step',
+	
+	  handleDone: function (e) {
+	    e.stopPropagation();
+	    StepStore.toggleDone(this.props.id);
+	  },
+	
+	  render: function () {
+	    return React.createElement(
+	      'div',
+	      null,
+	      React.createElement(
+	        'div',
+	        null,
+	        this.props.step
+	      ),
+	      React.createElement(DoneButton, { handleDone: this.handleDone, done: this.props.done, id: this.props.id })
+	    );
+	  }
+	
+	});
+	
+	module.exports = Step;
 
 /***/ }
 /******/ ]);

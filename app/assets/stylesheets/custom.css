@@ -1,0 +1,21 @@
+.list-item:hover {
+  cursor: pointer;
+}
+
+.list-item {
+  margin: 20px;
+  border: 1px solid black;
+  padding: 5px;
+  width: 400px;
+}
+
+.title {
+  font-family: arial;
+  font-size: 18px;
+  padding: 5px 0;
+}
+
+.body {
+  font-family: arial;
+  padding-top: 25px;
+}
